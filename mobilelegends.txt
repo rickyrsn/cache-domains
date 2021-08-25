@@ -1,0 +1,2 @@
+*.ml.youngjoygame.com
+akmcdn.ml.youngjoygame.com

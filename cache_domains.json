@@ -5,7 +5,8 @@
 			"description": "CDN for guild wars, HoT",
 			"domain_files": ["arenanet.txt"]
 		},
-		{	"name": "ayodance-megaxus",
+		{	
+			"name": "ayodance-megaxus",
 		 	"description": "CDN for Ayodance Megaxus",
 		 	"domain_files": ["ayodance-megaxus.txt"],
 		},

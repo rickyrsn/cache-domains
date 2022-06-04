@@ -1,7 +1,8 @@
 #!/bin/bash
 basedir=".."
-outputdir="output/dnsmasq"
+outputdir="output/squid"
 path="${basedir}/cache_domains.json"
+REGEX="^\\*\\.(.*)$"
 
 export IFS=' '
 
@@ -16,11 +17,6 @@ fi
 cachenamedefault="disabled"
 
 while read -r line; do
-        ip=$(jq ".ips[\"${line}\"]" config.json)
-        declare "cacheip${line}"="${ip}"
-done <<< $(jq -r '.ips | to_entries[] | .key' config.json)
-
-while read -r line; do
         name=$(jq -r ".cache_domains[\"${line}\"]" config.json)
         declare "cachename${line}"="${name}"
 done <<< $(jq -r '.cache_domains | to_entries[] | .key' config.json)
@@ -28,7 +24,6 @@ done <<< $(jq -r '.cache_domains | to_entries[] | .key' config.json)
 rm -rf ${outputdir}
 mkdir -p ${outputdir}
 while read -r entry; do
-        unset cacheip
         unset cachename
         key=$(jq -r ".cache_domains[$entry].name" $path)
         cachename="cachename${key}"
@@ -38,25 +33,32 @@ while read -r entry; do
         if [[ ${!cachename} == "disabled" ]]; then
                 continue;
         fi
-        cacheipname="cacheip${!cachename}"
-        cacheip=$(jq -r 'if type == "array" then .[] else . end' <<< ${!cacheipname} | xargs)
         while read -r fileid; do
                 while read -r filename; do
-                        destfilename=$(echo $filename | sed -e 's/txt/conf/')
+                        destfilename=$(echo ${!cachename}.txt)
                         outputfile=${outputdir}/${destfilename}
                         touch ${outputfile}
                         while read -r fileentry; do
-                                # Ignore comments, newlines and wildcards
+                                # Ignore comments
                                 if [[ ${fileentry} == \#* ]] || [[ -z ${fileentry} ]]; then
                                         continue
                                 fi
-                                parsed=$(echo ${fileentry} | sed -e "s/^\*\.//")
-                                for i in ${cacheip}; do
-                                        if grep -qx "address=/${parsed}/${i}" "${outputfile}"; then
-                                                continue
-                                        fi
-                                        echo "address=/${parsed}/${i}" >> "${outputfile}"
-                                done
+				# Handle wildcards to squid wildcards
+                                parsed=$(echo ${fileentry} | sed -e "s/^\*\./\./")
+				# If we have cdn.thing and *.cdn.thing in cache_domains
+				# Squid requires ONLY cdn.thing
+				#
+				# If the fileentry starts with *.cdn.thing
+				if [[ ${fileentry} =~ $REGEX ]]; then
+					# Does the cache_domains file also contain cdn.thing
+					grep "${BASH_REMATCH[1]}" ${basedir}/${filename} | grep -v "${fileentry}" > /dev/null
+					if [[ $? -eq 0 ]]; then
+						# Skip *.cdn.thing as cdn.thing will be collected earlier/later
+						continue
+					fi
+				fi
+
+                                echo "${parsed}" >> "${outputfile}"
                         done <<< $(cat ${basedir}/${filename} | sort);
                 done <<< $(jq -r ".cache_domains[${entry}].domain_files[$fileid]" ${path})
         done <<< $(jq -r ".cache_domains[${entry}].domain_files | to_entries[] | .key" ${path})
@@ -66,5 +68,5 @@ cat << EOF
 Configuration generation completed.
 
 Please copy the following files:
-- ./${outputdir}/*.conf to /etc/dnsmasq/dnsmasq.d/
+- ./${outputdir}/*.txt to /etc/squid/domains/
 EOF

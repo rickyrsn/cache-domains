@@ -5,3 +5,4 @@ download4.megaxus.com
 download5.megaxus.com
 122.102.49.147
 ayodance.megaxus.com
+*.megaxus.com

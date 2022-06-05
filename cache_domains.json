@@ -5,6 +5,10 @@
 			"description": "CDN for guild wars, HoT",
 			"domain_files": ["arenanet.txt"]
 		},
+			"name": "ayodance",
+			"description": "CDN for ayodance megaxus",
+			"domain_files": ["ayodancemegaxus.txt"]
+		},
 		{
 			"name": "mobilelegends",
 			"description": "CDN for mobile legends",

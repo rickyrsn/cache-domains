@@ -6,11 +6,6 @@
 			"domain_files": ["arenanet.txt"]
 		},
 		{
-			"name": "ayodance_megaxus",
-			"description": "CDN for Ayodance Megaxus",
-			"domain_files": ["ayodancemegaxus.txt"]
-		},
-		{
 			"name": "mobilelegends",
 			"description": "CDN for mobile legends",
 			"domain_files": ["mobilelegends.txt"]

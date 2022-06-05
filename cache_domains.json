@@ -8,7 +8,7 @@
 		{
 			"name": "ayodance_megaxus",
 			"description": "CDN for Ayodance Megaxus",
-			"domain_files": ["ayodance-megaxus.txt"]
+			"domain_files": ["ayodancemegaxus.txt"]
 		},
 		{
 			"name": "mobilelegends",

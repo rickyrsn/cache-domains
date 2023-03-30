@@ -1,6 +1,6 @@
 #!/bin/bash
 basedir=".."
-outputdir="output/dnsmasq"
+outputdir="output/adguardhome"
 path="${basedir}/cache_domains.json"
 
 export IFS=' '
@@ -20,6 +20,8 @@ while read -r line; do
         declare "cacheip${line}"="${ip}"
 done <<< $(jq -r '.ips | to_entries[] | .key' config.json)
 
+agh_upstreams=$(jq -r ".ips[\"adguardhome_upstream\"] | .[]" config.json)
+
 while read -r line; do
         name=$(jq -r ".cache_domains[\"${line}\"]" config.json)
         declare "cachename${line}"="${name}"
@@ -27,6 +29,10 @@ done <<< $(jq -r '.cache_domains | to_entries[] | .key' config.json)
 
 rm -rf ${outputdir}
 mkdir -p ${outputdir}
+
+# add upstreams
+echo "${agh_upstreams}" >> "${outputdir}/cache-domains.txt"
+
 while read -r entry; do
         unset cacheip
         unset cachename
@@ -42,7 +48,7 @@ while read -r entry; do
         cacheip=$(jq -r 'if type == "array" then .[] else . end' <<< ${!cacheipname} | xargs)
         while read -r fileid; do
                 while read -r filename; do
-                        destfilename=$(echo $filename | sed -e 's/txt/conf/')
+                        destfilename="cache-domains.txt"  #$(echo $filename | sed -e 's/txt/conf/')
                         outputfile=${outputdir}/${destfilename}
                         touch ${outputfile}
                         while read -r fileentry; do
@@ -52,12 +58,10 @@ while read -r entry; do
                                 fi
                                 parsed=$(echo ${fileentry} | sed -e "s/^\*\.//")
                                 for i in ${cacheip}; do
-                                        if ! grep -qx "address=/${parsed}/${i}" "${outputfile}"; then
-                                                echo "address=/${parsed}/${i}" >> "${outputfile}"
+                                        if grep -qx "\[/${parsed}/\]${i}" "${outputfile}"; then
+                                                continue
                                         fi
-                                        if ! grep -qx "local=/${parsed}/" "${outputfile}"; then
-                                                echo "local=/${parsed}/" >> "${outputfile}"
-                                        fi
+                                        echo "[/${parsed}/]${i}" >> "${outputfile}"
                                 done
                         done <<< $(cat ${basedir}/${filename} | sort);
                 done <<< $(jq -r ".cache_domains[${entry}].domain_files[$fileid]" ${path})
@@ -67,6 +71,7 @@ done <<< $(jq -r '.cache_domains | to_entries[] | .key' ${path})
 cat << EOF
 Configuration generation completed.
 
-Please copy the following files:
-- ./${outputdir}/*.conf to /etc/dnsmasq/dnsmasq.d/
+Please point the setting upstream_dns_file in AdGuardHome.yaml to the generated file.
+For example:
+upstream_dns_file: "/root/cache-domains/scripts/output/adguardhome/cache-domains.txt"
 EOF
